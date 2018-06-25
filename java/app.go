@@ -80,7 +80,7 @@ type certificate struct {
 func (a *AndroidApp) DepsMutator(ctx android.BottomUpMutatorContext) {
 	a.Module.deps(ctx)
 	if !Bool(a.properties.No_framework_libs) && !Bool(a.properties.No_standard_libs) {
-		a.aapt.deps(ctx, String(a.deviceProperties.Sdk_version))
+		a.aapt.deps(ctx, sdkContext(a))
 	}
 }
 
@@ -119,7 +119,7 @@ func (a *AndroidApp) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	// TODO: LOCAL_PACKAGE_OVERRIDES
 	//    $(addprefix --rename-manifest-package , $(PRIVATE_MANIFEST_PACKAGE_NAME)) \
 
-	a.aapt.buildActions(ctx, String(a.deviceProperties.Sdk_version), linkFlags...)
+	a.aapt.buildActions(ctx, sdkContext(a), linkFlags...)
 
 	// apps manifests are handled by aapt, don't let Module see them
 	a.properties.Manifest = nil

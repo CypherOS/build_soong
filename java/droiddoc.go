@@ -178,9 +178,17 @@ func DroiddocHostFactory() android.Module {
 	return module
 }
 
+func (j *Javadoc) sdkVersion() string {
+	return String(j.properties.Sdk_version)
+}
+
+func (j *Javadoc) minSdkVersion() string {
+	return j.sdkVersion()
+}
+
 func (j *Javadoc) addDeps(ctx android.BottomUpMutatorContext) {
 	if ctx.Device() {
-		sdkDep := decodeSdkDep(ctx, String(j.properties.Sdk_version))
+		sdkDep := decodeSdkDep(ctx, sdkContext(j))
 		if sdkDep.useDefaultLibs {
 			ctx.AddDependency(ctx.Module(), bootClasspathTag, config.DefaultBootclasspathLibraries...)
 			ctx.AddDependency(ctx.Module(), libTag, []string{"ext", "framework"}...)
@@ -200,7 +208,7 @@ func (j *Javadoc) addDeps(ctx android.BottomUpMutatorContext) {
 func (j *Javadoc) collectDeps(ctx android.ModuleContext) deps {
 	var deps deps
 
-	sdkDep := decodeSdkDep(ctx, String(j.properties.Sdk_version))
+	sdkDep := decodeSdkDep(ctx, sdkContext(j))
 	if sdkDep.invalidVersion {
 		ctx.AddMissingDependencies([]string{sdkDep.module})
 	} else if sdkDep.useFiles {
@@ -224,7 +232,7 @@ func (j *Javadoc) collectDeps(ctx android.ModuleContext) deps {
 		case SdkLibraryDependency:
 			switch tag {
 			case libTag:
-				sdkVersion := String(j.properties.Sdk_version)
+				sdkVersion := j.sdkVersion()
 				linkType := javaSdk
 				if strings.HasPrefix(sdkVersion, "system_") || strings.HasPrefix(sdkVersion, "test_") {
 					linkType = javaSystem
@@ -288,6 +296,7 @@ func (j *Javadoc) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 
 	var bootClasspathArgs, classpathArgs string
 	if ctx.Config().UseOpenJDK9() {
+	    javaVersion := getJavaVersion(ctx, String(j.properties.Java_version), sdkContext(j))
 		if len(deps.bootClasspath) > 0 {
 			// For OpenJDK 9 we use --patch-module to define the core libraries code.
 			// TODO(tobiast): Reorganize this when adding proper support for OpenJDK 9
@@ -353,6 +362,8 @@ func (d *Droiddoc) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	var implicits android.Paths
 	implicits = append(implicits, deps.bootClasspath...)
 	implicits = append(implicits, deps.classpath...)
+
+	javaVersion := getJavaVersion(ctx, String(d.Javadoc.properties.Java_version), sdkContext(d))
 
 	argFiles := ctx.ExpandSources(d.properties.Arg_files, nil)
 	argFilesMap := map[string]android.Path{}

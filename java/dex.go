@@ -153,11 +153,12 @@ func (j *Module) dxFlags(ctx android.ModuleContext, fullD8 bool) []string {
 		}
 	}
 
-	if fullD8 {
-		flags = append(flags, "--min-api "+j.minSdkVersionNumber(ctx))
-	} else {
-		flags = append(flags, "--min-sdk-version="+j.minSdkVersionNumber(ctx))
+	minSdkVersion, err := sdkVersionToNumberAsString(ctx, j.minSdkVersion())
+	if err != nil {
+		ctx.PropertyErrorf("min_sdk_version", "%s", err)
 	}
+
+	flags = append(flags, "--min-api "+minSdkVersion)
 	return flags
 }
 
